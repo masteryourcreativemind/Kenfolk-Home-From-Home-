@@ -620,7 +620,8 @@ document.querySelectorAll("[data-direction]").forEach((button) => {
   });
 });
 window.addEventListener("keydown", (event) => {
-  if (event.target.closest("input, select, textarea") || $("help-dialog").open) return;
+  if (event.ctrlKey || event.metaKey || event.altKey ||
+      event.target.closest("input, select, textarea") || $("help-dialog").open) return;
   const key = event.key.toLowerCase();
   if ($("map-dialog").open) {
     if (key === "m") { event.preventDefault(); $("map-dialog").close(); }
@@ -641,7 +642,8 @@ window.addEventListener("keyup", (event) => heldDirections.delete(event.key.toLo
 window.addEventListener("blur", stopMovement);
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopMovement(); });
 document.querySelector(".tabs").addEventListener("keydown", (event) => {
-  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  if (event.ctrlKey || event.metaKey || event.altKey ||
+      !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
   event.preventDefault(); event.stopPropagation();
   const tabs = Array.from(document.querySelectorAll("[data-tab]"));
   const current = tabs.indexOf(event.target);
