@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import socket
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -74,7 +75,8 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             self._reply(400, {"error": "Invalid host."})
             return False
-        if host not in self.server.allowed_hosts:
+        if host not in self.server.allowed_hosts \
+                and host != self.connection.getsockname()[0]:
             self._reply(403, {"error": "This host is not allowed to access the local game."})
             return False
         return True
@@ -193,6 +195,23 @@ def run(out_dir="output", host="127.0.0.1", port=8765, seed=None,
         local_host = "127.0.0.1" if host == "0.0.0.0" else host
         url = f"http://{local_host}:{server.server_port}"
         print(f"\nPINEWOOD - play your own life\nOpen {url}", flush=True)
+        if server.server_address[0] == "0.0.0.0":
+            try:
+                addresses = {entry[4][0] for entry in socket.getaddrinfo(
+                    socket.gethostname(), None, socket.AF_INET, socket.SOCK_STREAM)}
+            except socket.gaierror as exc:
+                print(f"[player] Could not discover LAN addresses: {exc}. "
+                      "Use this computer's Wi-Fi or Ethernet IPv4 address.",
+                      file=sys.stderr, flush=True)
+            else:
+                for address in sorted(addresses):
+                    if not address.startswith("127.") and address != "0.0.0.0":
+                        print(f"LAN: http://{address}:{server.server_port}", flush=True)
+            print("Other devices: use this computer's LAN IP, not localhost or 0.0.0.0.",
+                  flush=True)
+        if not server.server_address[0].startswith("127."):
+            print("Trusted network only: no login. All devices share one saved life. "
+                  "Do not forward this port on your router.", flush=True)
         forwarded = forwarded_url(server.server_port)
         if forwarded:
             print(f"Codespaces: {forwarded} (keep the forwarded port private)", flush=True)

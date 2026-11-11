@@ -36,7 +36,8 @@ def main(argv=None):
     modes.add_argument("--graphical", action="store_true",
                        help="watch the autonomous AI writer in a pygame window")
     ap.add_argument("--host", default="127.0.0.1",
-                    help="browser server bind address (default: loopback only)")
+                    help="browser bind address; use 0.0.0.0 for LAN access "
+                         "(default: loopback only)")
     ap.add_argument("--port", type=int, default=8765,
                     help="browser server port (default: 8765)")
     ap.add_argument("--no-browser", action="store_true",
