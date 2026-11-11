@@ -72,6 +72,26 @@ class BrowserHostTests(unittest.TestCase):
                 self.assertEqual(status, 403)
         self.assertEqual(self.server.game.clock, clock)
 
+    def test_listener_address_accepts_page_and_actions_without_a_static_host_entry(self):
+        self.server.allowed_hosts.remove("127.0.0.1")
+        status, _, raw = self.request("/")
+        self.assertEqual(status, 200)
+        self.assertIn(b'id="game-canvas"', raw)
+        status, _, raw = self.request("/api/state")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(raw)["token"], self.server.token)
+        before = self.server.game.clock
+        status, _, _ = self.action(
+            {"action": "wait", "minutes": 1}, {"Origin": self.url})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.server.game.clock, before + 1)
+
+    def test_listener_address_does_not_allow_arbitrary_lan_ips_or_rebinding_hosts(self):
+        for host in ("192.168.1.25", "10.0.0.10", "127.0.0.1.unrelated.example"):
+            with self.subTest(host=host):
+                status, _, _ = self.request("/api/state", headers={"Host": host})
+                self.assertEqual(status, 403)
+
     def test_bad_action_shapes_return_explicit_errors_not_success(self):
         start = self.server.game.clock
         for payload in (["move"], {"action": "move", "dx": True, "dy": 0},

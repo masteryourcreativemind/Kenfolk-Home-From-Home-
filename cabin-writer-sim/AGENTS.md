@@ -20,6 +20,13 @@ actions advance time; actions autosave to `output/player-save.json`, which
 resumes automatically. Player mode uses in-game credits only, never real
 payments. Do not substitute an AI chronicle when the user asks to play.
 
+For access from other devices on a trusted LAN, use
+`python3 main.py --play --host 0.0.0.0 --no-browser` on a computer connected
+to that LAN and give the user its printed LAN URL, not `localhost`.
+All devices share the same character/save, with no login. Do not open
+router ports or disable firewalls; allow TCP 8765 on the private network
+if needed. A hosted workspace is not automatically on the user's home LAN.
+
 For the original autonomous AI writer:
 
 ```bash

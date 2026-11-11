@@ -29,6 +29,40 @@ library: **no pygame, package installation, AI agent or payment service**.
 The server binds to your own computer only by default. Use `--port 8766`
 if that port is occupied.
 
+#### Play from phones, tablets or other computers on your LAN
+
+Run the game on a computer connected to the same Wi-Fi or Ethernet network
+as your other devices:
+
+```bash
+cd cabin-writer-sim
+python3 main.py --play --host 0.0.0.0 --no-browser
+```
+
+Keep that computer and the Python server running. The terminal prints
+discovered **LAN** URLs, such as `http://192.168.1.25:8765`. Open the URL
+using that computer's Wi-Fi/Ethernet IPv4 address in any device's browser.
+If the discovered address is not your LAN address, find it in the host's
+network settings (`ipconfig` on Windows, or `ip -4 address` on Linux).
+`localhost` and `127.0.0.1` mean the device you are holding;
+`0.0.0.0` is a listening address, not the address to open.
+
+Allow inbound **TCP 8765** for Python on your host's **private network**
+if its firewall asks. Guest Wi-Fi or access-point/client isolation can
+prevent devices from connecting even on the same router. No packages
+need to be installed on the other devices.
+
+LAN clients share **one character and save**, not separate multiplayer
+characters; reload a second device to see changes made on the first.
+Anyone who can reach the server can play, download the save or start a
+new life. Use a trusted network only and **do not forward this port on
+your router**.
+
+A hosted workspace, container or Codespace is not automatically part of
+your home LAN. For home-network access, run this command on your own
+computer; changing the workspace's bind address does not connect it to
+your home Wi-Fi.
+
 In GitHub Codespaces, run `python3 main.py --no-browser --host 0.0.0.0`,
 forward port **8765** in the Ports panel and open its browser URL. Keep the
 port **private**; this is a personal local game host, not a public
