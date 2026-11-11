@@ -5,6 +5,7 @@ the mind, the work, the money, and the log of a life."""
 import json
 import os
 import random
+import tempfile
 import time
 from collections import deque
 
@@ -649,9 +650,8 @@ class Sim:
                                         sorted(self.traits.items())))
 
     # ----------------------------------------------------------- save/load ---
-    def save(self, path=None):
-        path = path or os.path.join(self.out_dir, "save.json")
-        data = {
+    def to_dict(self):
+        return {
             "clock": self.clock, "weather": self.weather, "owner": self.owner,
             "body": self.body.to_dict(), "traits": self.mind.traits,
             "plan": self.plan.to_dict(),
@@ -662,8 +662,23 @@ class Sim:
             "walked_today": self.walked_today,
             "prayed_today": self.prayed_today,
         }
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, indent=2)
+
+    def save(self, path=None):
+        path = path or os.path.join(self.out_dir, "save.json")
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                    mode="w", encoding="utf-8", delete=False,
+                    dir=os.path.dirname(os.path.abspath(path)),
+                    prefix=".save-", suffix=".tmp") as fh:
+                temporary = fh.name
+                json.dump(self.to_dict(), fh, indent=2)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(temporary, path)
+        finally:
+            if temporary and os.path.exists(temporary):
+                os.unlink(temporary)
         return path
 
     @classmethod
@@ -673,18 +688,21 @@ class Sim:
             data = json.load(fh)
         sim = cls(out_dir=out_dir, enable_real_payments=enable_real_payments,
                   owner=data.get("owner", config.DEFAULT_OWNER_NAME))
-        sim.clock = data["clock"]
-        sim.weather = data["weather"]
-        sim.body = Body.from_dict(data["body"])
-        sim.mind.traits.update(data.get("traits", {}))
-        sim.plan = mindmod.LifePlan.from_dict(data.get("plan", {}))
-        if data.get("current_book"):
-            sim.current_book = bookmod.Book.from_dict(data["current_book"])
-        sim.finished_books = data.get("finished_books", [])
-        sim.research_notes = data.get("research_notes", [])
-        sim.walked_today = data.get("walked_today", False)
-        sim.prayed_today = data.get("prayed_today", False)
+        sim._restore(data)
         return sim
+
+    def _restore(self, data):
+        self.clock = data["clock"]
+        self.weather = data["weather"]
+        self.body = Body.from_dict(data["body"])
+        self.mind.traits.update(data.get("traits", {}))
+        self.plan = mindmod.LifePlan.from_dict(data.get("plan", {}))
+        if data.get("current_book"):
+            self.current_book = bookmod.Book.from_dict(data["current_book"])
+        self.finished_books = data.get("finished_books", [])
+        self.research_notes = data.get("research_notes", [])
+        self.walked_today = data.get("walked_today", False)
+        self.prayed_today = data.get("prayed_today", False)
 
     def _save_books_index(self):
         with open(os.path.join(self.out_dir, "books.json"), "w",

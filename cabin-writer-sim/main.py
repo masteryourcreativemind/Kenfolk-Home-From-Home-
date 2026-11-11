@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""The Cabin Writer — a lonely writer's life simulation.
+"""The Cabin Writer — play your own life, or watch the AI writer.
 
-Graphical (for a human at a screen):
+Browser game (direct player control; no dependencies):
     python main.py
+
+Graphical AI simulation (requires pygame):
+    python main.py --graphical
 
 Headless (for an AI agent in a terminal):
     python main.py --headless --days 10 --speed 60 \
@@ -12,7 +15,7 @@ Headless (for an AI agent in a terminal):
 Real-money hookup is opt-in:
     export CABIN_PAYMENT_ENDPOINT=https://your-provider.example
     export CABIN_PAYMENT_KEY=sk_...
-    python main.py --enable-real-payments
+    python main.py --headless --enable-real-payments
 """
 
 import argparse
@@ -24,9 +27,20 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def main(argv=None):
     ap = argparse.ArgumentParser(
-        description="The Cabin Writer — a writer's life in the rain.")
-    ap.add_argument("--headless", action="store_true",
-                    help="run without a window (AI-agent mode)")
+        description="The Cabin Writer — play your own life in the rain.")
+    modes = ap.add_mutually_exclusive_group()
+    modes.add_argument("--play", action="store_true",
+                       help="player-controlled browser game (the default)")
+    modes.add_argument("--headless", action="store_true",
+                       help="autonomous AI simulation without a window")
+    modes.add_argument("--graphical", action="store_true",
+                       help="watch the autonomous AI writer in a pygame window")
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="browser server bind address (default: loopback only)")
+    ap.add_argument("--port", type=int, default=8765,
+                    help="browser server port (default: 8765)")
+    ap.add_argument("--no-browser", action="store_true",
+                    help="print the play URL without opening a browser")
     ap.add_argument("--days", type=float, default=None,
                     help="stop after N game days (headless; default: forever)")
     ap.add_argument("--speed", type=float, default=30,
@@ -54,6 +68,24 @@ def main(argv=None):
     ap.add_argument("--frames", type=int, default=None,
                     help="graphical: exit after N frames (testing)")
     args = ap.parse_args(argv)
+
+    if not args.headless and not args.graphical:
+        if args.enable_real_payments:
+            ap.error("player mode uses in-game credits only; real payments are not supported")
+        if args.command or args.script or args.interactive or args.days is not None:
+            ap.error("writer directives and --days require --headless or --graphical; "
+                     "the browser game is directly player-controlled")
+        if args.frames is not None or args.screenshot:
+            ap.error("--frames and --screenshot require --graphical")
+        if not 0 <= args.port <= 65535:
+            ap.error("--port must be between 0 and 65535")
+        from game.web import run
+        try:
+            return run(out_dir=args.out, host=args.host, port=args.port,
+                       seed=args.seed, owner=args.owner or "The Reader",
+                       load=args.load, open_browser=not args.no_browser)
+        except (OSError, ValueError) as exc:
+            ap.error(str(exc))
 
     from game import config
     from game.sim import Sim
