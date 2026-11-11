@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#16231e">
+  <title>Pinewood | Play your own life</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/play.css">
+  <script src="/play.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand"><span class="eyebrow">THE CABIN WRITER</span><h1>Pinewood</h1><p>Play your own life.</p></div>
+    <div class="world-status">
+      <strong id="clock">Your life is loading...</strong>
+      <span id="forecast">A cabin in the pines</span>
+      <span class="money" id="money">In-game credits only</span>
+    </div>
+    <nav class="top-controls" aria-label="Game controls">
+      <button id="map-open">Map <kbd>M</kbd></button>
+      <a class="button" href="/api/save" download>Download save</a>
+      <button id="help-open">How to play</button>
+      <button id="new-life" class="subtle">New life</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <section class="world-column" aria-label="Your surroundings">
+      <div class="scene-heading"><div><span class="eyebrow">YOU ARE HERE</span><h2 id="location">The log cabin</h2></div><span id="climate">Sheltered interior</span></div>
+      <div class="stage">
+        <canvas id="game-canvas" width="736" height="448" tabindex="0" role="img" aria-label="Game world. Use WASD or arrow keys to move."></canvas>
+        <div class="stage-badge" id="environment">Loading the weather...</div>
+        <div class="dpad" aria-label="Movement controls">
+          <button class="up" data-direction="up" aria-label="Move up">W</button>
+          <button class="left" data-direction="left" aria-label="Move left">A</button>
+          <button class="down" data-direction="down" aria-label="Move down">S</button>
+          <button class="right" data-direction="right" aria-label="Move right">D</button>
+        </div>
+        <button id="zoom" class="zoom-control">Whole scene</button>
+        <div id="game-over" class="game-over" hidden><h2>Your life has ended.</h2><p id="death-reason"></p><button id="restart">Start a new life</button></div>
+      </div>
+      <div class="scene-caption"><span id="position">WASD / arrows to walk</span><span>Click ground to walk there. <kbd>E</kbd> to interact.</span></div>
+      <div id="notice" class="notice" role="status" aria-live="polite">You are the player, not a spectator. Explore the map and meet Nessa at the dock.</div>
+      <div class="health-card">
+        <button id="health-open" class="health-title"><strong id="total-hp">1,000 / 1,000 HP</strong><span>Open organ health <kbd>B</kbd></span></button>
+        <div id="hp-segments" class="hp-segments" role="img" aria-label="Organ health"></div>
+        <div id="needs" class="needs"></div>
+        <p class="time-note"><span class="live-dot"></span> Your choices advance time. Menus and inactivity do not.</p>
+      </div>
+      <div class="trail-note"><span class="eyebrow">YOUR FIRST DAY</span><p>Walk to the lake. Talk to Nessa, accept her supper quest and catch two fish. Sell what you gather, keep yourself fed, and come home to your own desk.</p></div>
+    </section>
+
+    <aside class="sidebar" aria-label="Player controls and information">
+      <div class="tabs" role="tablist" aria-label="Player panels">
+        <button id="tab-actions" role="tab" aria-selected="true" aria-controls="panel-actions" data-tab="actions">Actions</button>
+        <button id="tab-body" role="tab" aria-selected="false" aria-controls="panel-body" data-tab="body">Body</button>
+        <button id="tab-inventory" role="tab" aria-selected="false" aria-controls="panel-inventory" data-tab="inventory">Bag</button>
+        <button id="tab-journal" role="tab" aria-selected="false" aria-controls="panel-journal" data-tab="journal">Journal</button>
+      </div>
+
+      <section id="panel-actions" class="panel" role="tabpanel" aria-labelledby="tab-actions">
+        <div class="panel-section"><span class="eyebrow">HERE &amp; NOW</span><div id="npc-cards"></div><button data-action="interact" class="wide">Interact <kbd>E</kbd></button></div>
+        <div class="panel-section">
+          <h3>Take care of yourself</h3>
+          <div class="input-action"><label class="sr-only" for="food">Food to eat</label><select id="food"></select><button data-action="eat">Eat</button></div>
+          <div class="button-grid">
+            <button data-action="drink" id="drink-button">Drink water</button><button data-action="refill">Refill water <small>15 min</small></button>
+            <button data-action="bandage">Bandage <small>10 min</small></button><button data-action="medicine">Medicine <small>10 min</small></button>
+            <button data-action="wash">Wash <small>20 min</small></button><button data-action="rest">Rest <small>1 hour</small></button>
+            <button data-action="sleep">Sleep <small>8 hours / bed</small></button><button data-action="read">Read <small>1 hour</small></button>
+          </div>
+          <div class="input-action"><label class="sr-only" for="wait-minutes">Time to wait</label><select id="wait-minutes"><option value="30">Wait 30 minutes</option><option value="60" selected>Wait 1 hour</option><option value="180">Wait 3 hours</option></select><button data-action="wait">Wait</button></div>
+        </div>
+        <div class="panel-section">
+          <h3>Out in the woods</h3><p class="muted" id="outdoor-hint">The lake has fish. The pines have food and fuel.</p>
+          <div class="button-grid"><button data-action="fish">Fish <small>45 min / bait</small></button><button data-action="forage">Forage <small>40 min</small></button><button data-action="gather_wood">Gather wood <small>30 min</small></button><button data-action="drink" data-unsafe="true" class="danger">Raw lake water <small>Illness risk</small></button></div>
+          <div class="input-action"><label class="sr-only" for="hunt-target">Animal to hunt</label><select id="hunt-target"></select><button data-action="hunt">Hunt <small>1 hour</small></button></div>
+        </div>
+        <div class="panel-section">
+          <h3>By the stove</h3><p class="muted" id="stove-hint">Move beside a stove to light a fire or cook.</p>
+          <button data-action="light_fire" class="wide">Light stove <small>1 wood / 3 hours of heat</small></button>
+          <div class="input-action"><label class="sr-only" for="raw-food">Food to cook</label><select id="raw-food"></select><button data-action="cook">Cook <small>30 min</small></button></div>
+        </div>
+        <div class="panel-section">
+          <h3>A book of your own</h3><p id="book-progress" class="muted">You decide what to write and when to write it.</p>
+          <form id="book-form">
+            <label for="topic">Book / research topic</label><input id="topic" maxlength="200" value="a life in the rain" required>
+            <label for="book-title">Title <span class="muted">(optional)</span></label><input id="book-title" maxlength="100" placeholder="Let the notebook suggest one">
+            <button id="begin-book" class="wide" type="submit">Start a book</button>
+          </form>
+          <div class="button-grid"><button data-action="write">Write <small>2 hours / desk</small></button><button data-action="research">Research <small>2.5 hours / library</small></button></div>
+        </div>
+      </section>
+
+      <section id="panel-body" class="panel" role="tabpanel" aria-labelledby="tab-body" hidden>
+        <div class="panel-section">
+          <h3>Your body, not just a bar</h3><p class="muted">1,000 HP across nine organ systems. Losing your brain, heart or lungs ends your life even if other HP remains.</p>
+          <div class="body-overview">
+            <svg id="body-diagram" viewBox="0 0 140 230" role="img" aria-label="Body diagram, colored by organ health">
+              <path data-organ="skin" d="M48 55 Q35 57 31 74 L24 128 L34 133 L44 91 L44 145 L48 213 L62 213 L70 157 L78 213 L92 213 L96 145 L96 91 L106 133 L116 128 L109 74 Q105 57 92 55Z"/>
+              <circle data-organ="skin" cx="70" cy="31" r="24"/>
+              <ellipse data-organ="brain" cx="70" cy="26" rx="15" ry="11"/>
+              <g data-organ="arms"><rect x="29" y="77" width="10" height="45" rx="4"/><rect x="101" y="77" width="10" height="45" rx="4"/></g>
+              <g data-organ="legs"><rect x="49" y="153" width="12" height="54" rx="5"/><rect x="79" y="153" width="12" height="54" rx="5"/></g>
+              <g data-organ="lungs"><ellipse cx="57" cy="85" rx="11" ry="19"/><ellipse cx="83" cy="85" rx="11" ry="19"/></g>
+              <path data-organ="heart" d="M64 85 C55 75 58 94 70 100 C82 91 83 78 73 83 L70 87Z"/>
+              <path data-organ="liver" d="M48 108 Q67 99 87 108 L74 120 L51 118Z"/>
+              <ellipse data-organ="stomach" cx="79" cy="124" rx="12" ry="10"/>
+              <g data-organ="kidneys"><ellipse cx="54" cy="134" rx="6" ry="9"/><ellipse cx="86" cy="143" rx="6" ry="9"/></g>
+            </svg>
+            <div id="body-stats" class="body-stats"></div>
+          </div>
+          <div id="conditions" class="conditions"></div><div id="organ-list" class="organ-list"></div>
+          <p class="muted">Food, clean water, shelter and sleep support recovery. Bandages stop bleeding. Medicine or Jun treats illness. These are fictional game rules, not medical guidance.</p>
+        </div>
+      </section>
+
+      <section id="panel-inventory" class="panel" role="tabpanel" aria-labelledby="tab-inventory" hidden>
+        <div class="panel-section"><h3>Dress for the day</h3><p class="muted">Wet clothes lose insulation. Heavy clothes retain heat, even indoors.</p><div id="clothing-list"></div></div>
+        <div class="panel-section"><h3>Your supplies</h3><div id="inventory-list"></div><p id="equipment" class="muted"></p></div>
+        <div class="panel-section" id="market"><h3>Mira's market</h3><p id="market-hint" class="muted">Visit Mira at the General Store to buy and sell.</p><div id="shop-list"></div><h4>Sell your finds</h4><div id="sell-list"></div></div>
+      </section>
+
+      <section id="panel-journal" class="panel" role="tabpanel" aria-labelledby="tab-journal" hidden>
+        <div class="panel-section"><h3>People &amp; promises</h3><div id="quest-list"></div></div>
+        <div class="panel-section"><h3>Learning by doing</h3><div id="skills"></div></div>
+        <div class="panel-section"><h3>Your published books</h3><div id="books"></div></div>
+        <div class="panel-section"><h3>The day's chronicle</h3><ol id="event-log" class="event-log"></ol></div>
+      </section>
+    </aside>
+  </main>
+  <footer>One village. Your choices. A life worth writing about. <span>Autosaved after every action.</span></footer>
+
+  <dialog id="map-dialog" aria-labelledby="map-title">
+    <div class="dialog-heading"><div><span class="eyebrow">A WORLD YOU CAN EXPLORE</span><h2 id="map-title">Pinewood map</h2></div><button data-close="map-dialog" aria-label="Close map">Close</button></div>
+    <canvas id="map-canvas" width="736" height="448" role="img" aria-label="Full world map with buildings, villagers, wildlife and your position"></canvas>
+    <p class="muted">Gold marks you. Colored dots mark villagers; pale dots mark animals. Click a building door to walk there. Journeys cost game time, not credits.</p>
+    <div id="destinations" class="destinations"></div><div id="villagers" class="villagers"></div>
+  </dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><h2 id="help-title">This time, you are the player.</h2><button data-close="help-dialog" aria-label="Close help">Close</button></div>
+    <p>Move with <kbd>WASD</kbd> or the <kbd>arrow keys</kbd>, the on-screen pad, or by clicking ground. Step through marked doors to enter buildings and through the floor exit to leave.</p>
+    <p><kbd>E</kbd> interacts, <kbd>M</kbd> opens your map, <kbd>B</kbd> opens your body, <kbd>I</kbd> opens your bag, and <kbd>J</kbd> opens your journal. Stand within two tiles of a villager or workstation to use it.</p>
+    <p>Start with Nessa's fishing quest at the lake. Your rod, bow, raincoat, meals and supplies are already packed. Hunting needs an animal within six tiles and an unobstructed shot; wildlife roams and replenishes daily.</p>
+    <p>Eat, drink, rest and wash. Cook raw catches at a lit stove. Rain wets you, uplands are colder, and thick clothes can overheat you. Check individual organs, body temperature, water and blood, not only total HP.</p>
+    <p>Talk to Mira to trade, Jun for treatment, Rowan for a hunting quest and Ada for writing advice. You can still research and write books that earn credits and download as EPUB/PDF bundles.</p>
+    <p>Time passes only through your actions. Every action saves automatically. Download a backup before choosing New life. On restart, your saved player life resumes automatically.</p>
+  </dialog>
+  <noscript>This game needs JavaScript enabled in your browser, but no downloads or third-party packages.</noscript>
+</body>
+</html>

@@ -4,6 +4,7 @@ these are hard constraints the mind must plan around."""
 
 import random
 from . import config
+from .survival import MAX_HP, Physiology
 
 
 NEEDS = ("satiety", "energy", "hygiene", "inspiration", "social", "mood")
@@ -20,6 +21,7 @@ class Body:
             "social": 45.0,      # 0 = utterly alone
             "mood": 50.0,        # 0 = despair, 100 = rare bright day
         }
+        self.physiology = Physiology()
         self.health = 90.0
         self.money = config.STARTING_MONEY
         self.food = config.STARTING_FOOD      # meals in the pantry
@@ -36,7 +38,15 @@ class Body:
         self.moving = False
 
     # ------------------------------------------------------------- needs ---
-    def decay(self, hours, traits):
+    @property
+    def health(self):
+        return self.physiology.hp / MAX_HP * 100
+
+    @health.setter
+    def health(self, value):
+        self.physiology.set_health(value)
+
+    def decay(self, hours, traits, manage_health=True):
         d = config.DECAY
         n = self.needs
         n["satiety"] = max(0.0, n["satiety"] - d["satiety"] * hours)
@@ -44,8 +54,9 @@ class Body:
             n["energy"] = min(100.0, n["energy"] + config.SLEEP_RECOVERY * hours)
             # sleep is the body's repair shift — but you cannot heal past
             # an empty stomach
-            cap = min(100.0, max(65.0, n["satiety"]))
-            self.health = min(cap, self.health + 3.0 * hours)
+            if manage_health:
+                cap = min(100.0, max(65.0, n["satiety"]))
+                self.health = min(cap, self.health + 3.0 * hours)
         else:
             n["energy"] = max(0.0, n["energy"] - d["energy"] * hours)
         n["hygiene"] = max(0.0, n["hygiene"] - d["hygiene"] * hours)
@@ -55,11 +66,12 @@ class Body:
         n["social"] = max(0.0, n["social"] - social_decay * hours)
 
         # health follows the body's worst failures
-        if n["satiety"] <= 5 or n["energy"] <= 3:
-            self.health = max(0.0, self.health - config.HEALTH_DECAY * hours)
-        elif self.health < 100:
-            floor = min(100.0, max(60.0, (n["satiety"] + n["energy"]) / 2))
-            self.health = min(floor, self.health + 1.5 * hours)
+        if manage_health:
+            if n["satiety"] <= 5 or n["energy"] <= 3:
+                self.health = max(0.0, self.health - config.HEALTH_DECAY * hours)
+            elif self.health < 100:
+                floor = min(100.0, max(60.0, (n["satiety"] + n["energy"]) / 2))
+                self.health = min(floor, self.health + 1.5 * hours)
 
     def drift_mood(self, hours, weather, traits):
         """Mood slides toward a baseline set by weather, health, and the
@@ -81,11 +93,11 @@ class Body:
         n["mood"] = max(0.0, min(100.0, n["mood"] + delta))
 
     # ----------------------------------------------------------- actions ---
-    def eat(self):
+    def eat(self, nutrition=55):
         if self.food <= 0:
             return False
         self.food -= 1
-        self.needs["satiety"] = min(100.0, self.needs["satiety"] + 55)
+        self.needs["satiety"] = min(100.0, self.needs["satiety"] + nutrition)
         return True
 
     def wash(self):
@@ -117,6 +129,7 @@ class Body:
         return {
             "name": self.name, "needs": dict(self.needs),
             "health": self.health, "money": self.money, "food": self.food,
+            "physiology": self.physiology.to_dict(),
             "supplies": dict(self.supplies), "furniture": dict(self.furniture),
             "scene": self.scene, "x": self.x, "y": self.y,
         }
@@ -125,7 +138,10 @@ class Body:
     def from_dict(cls, data):
         b = cls(data.get("name", config.DEFAULT_WRITER_NAME))
         b.needs.update(data.get("needs", {}))
-        b.health = data.get("health", 90.0)
+        if "physiology" in data:
+            b.physiology = Physiology.from_dict(data["physiology"])
+        else:
+            b.health = data.get("health", 90.0)
         b.money = data.get("money", config.STARTING_MONEY)
         b.food = data.get("food", config.STARTING_FOOD)
         b.supplies.update(data.get("supplies", {}))

@@ -5,6 +5,23 @@ simulation. This file is your complete operating manual.
 
 ## Start the game
 
+For a user who wants to play **themselves**, start the directly controlled
+browser game, not the autonomous headless simulation:
+
+```bash
+cd cabin-writer-sim
+python3 main.py --play --no-browser
+```
+
+Give them the printed URL (default `http://127.0.0.1:8765`). No dependencies
+are needed. In Codespaces, bind with `--host 0.0.0.0` and forward port 8765
+privately. WASD/arrows move, E interacts, M opens the map. Only player
+actions advance time; actions autosave to `output/player-save.json`, which
+resumes automatically. Player mode uses in-game credits only, never real
+payments. Do not substitute an AI chronicle when the user asks to play.
+
+For the original autonomous AI writer:
+
 ```bash
 cd cabin-writer-sim
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
@@ -17,7 +34,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python main.py --headless --interactive --speed 60
 
 # Graphical window (only if the user has a display):
-.venv/bin/python main.py
+.venv/bin/python main.py --graphical
 ```
 
 Headless mode needs **no third-party packages at all** — if `pip install`
@@ -29,7 +46,7 @@ owner), `--out DIR` (where zips/saves go), `--load PATH` (resume),
 
 ## Passing the user's commands
 
-Translate the user's wishes into directives, either via `--command`
+In AI mode, translate the user's wishes into directives, either via `--command`
 (repeatable), a `--script` file (one directive per line, `#` comments ok),
 or stdin in `--interactive` mode. The writer understands plain English;
 examples live in `game/mind.py` (`CommandParser`) and in the README. The
@@ -46,6 +63,9 @@ manuscript and manifest. Point the user at the zip path printed in the log
 line beginning `printer:`.
 
 ## Money
+
+In player mode, credits come from selling gathered goods, NPC quests and
+book royalties. NPC trading is proximity- and opening-hours-gated.
 
 Default: mock credits; `top up 20 dollars` just works. Real charges happen
 ONLY if the user set `CABIN_PAYMENT_ENDPOINT` + `CABIN_PAYMENT_KEY` and
